@@ -15,4 +15,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Remove listener
   removeFileOpenedListener: () => ipcRenderer.removeAllListeners("file-opened"),
+
+  // Read file as buffer (for EPUB.js)
+  readFile: (filePath) => ipcRenderer.invoke("read-file", filePath),
 });

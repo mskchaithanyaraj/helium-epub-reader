@@ -52,13 +52,16 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
       if (navigation && navigation.toc) {
         const findChapter = (items) => {
           for (const item of items) {
-            const cleanItemHref = item.href.split('#')[0].split('?')[0];
-            const cleanSpineHref = href.split('#')[0].split('?')[0];
-            
-            if (cleanSpineHref.includes(cleanItemHref) || cleanItemHref.includes(cleanSpineHref)) {
-              return item.label.trim().replace(/\s+/g, ' ');
+            const cleanItemHref = item.href.split("#")[0].split("?")[0];
+            const cleanSpineHref = href.split("#")[0].split("?")[0];
+
+            if (
+              cleanSpineHref.includes(cleanItemHref) ||
+              cleanItemHref.includes(cleanSpineHref)
+            ) {
+              return item.label.trim().replace(/\s+/g, " ");
             }
-            
+
             if (item.subitems && item.subitems.length > 0) {
               const found = findChapter(item.subitems);
               if (found) return found;
@@ -66,7 +69,7 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
           }
           return null;
         };
-        
+
         const chapterName = findChapter(navigation.toc);
         if (chapterName) {
           console.log("Chapter name:", chapterName);
@@ -89,7 +92,7 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
       return;
     }
 
-    setCurrentSpineIndex(prevIndex => {
+    setCurrentSpineIndex((prevIndex) => {
       const nextIndex = prevIndex + 1;
       if (nextIndex >= totalSpineItems) {
         console.log("Already at last chapter");
@@ -97,13 +100,17 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
       }
 
       console.log(`Moving from spine ${prevIndex} to ${nextIndex}`);
-      
+
       // Clear and force redisplay
       renditionRef.current.clear();
       renditionRef.current.display(nextIndex).then(() => {
         console.log("Displayed spine index:", nextIndex);
-        updateChapterTitle(nextIndex, bookRef.current, bookRef.current.navigation);
-        
+        updateChapterTitle(
+          nextIndex,
+          bookRef.current,
+          bookRef.current.navigation
+        );
+
         // Save the new location
         if (bookId) {
           const spineItem = bookRef.current.spine.get(nextIndex);
@@ -111,7 +118,7 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
             storage.saveLocation(bookId, spineItem.cfiBase);
           }
         }
-        
+
         // Force resize to ensure proper display
         setTimeout(() => {
           renditionRef.current.resize();
@@ -129,7 +136,7 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
       return;
     }
 
-    setCurrentSpineIndex(prevIndex => {
+    setCurrentSpineIndex((prevIndex) => {
       const newIndex = prevIndex - 1;
       if (newIndex < 0) {
         console.log("Already at first chapter");
@@ -137,13 +144,17 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
       }
 
       console.log(`Moving from spine ${prevIndex} to ${newIndex}`);
-      
+
       // Clear and force redisplay
       renditionRef.current.clear();
       renditionRef.current.display(newIndex).then(() => {
         console.log("Displayed spine index:", newIndex);
-        updateChapterTitle(newIndex, bookRef.current, bookRef.current.navigation);
-        
+        updateChapterTitle(
+          newIndex,
+          bookRef.current,
+          bookRef.current.navigation
+        );
+
         // Save the new location
         if (bookId) {
           const spineItem = bookRef.current.spine.get(newIndex);
@@ -151,7 +162,7 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
             storage.saveLocation(bookId, spineItem.cfiBase);
           }
         }
-        
+
         // Force resize to ensure proper display
         setTimeout(() => {
           renditionRef.current.resize();
@@ -249,12 +260,15 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
                 console.log("Found saved spine index:", startIndex);
               }
             } catch (e) {
-              console.log("Could not parse saved location, starting from beginning", e);
+              console.log(
+                "Could not parse saved location, starting from beginning",
+                e
+              );
             }
           }
 
           setCurrentSpineIndex(startIndex);
-          
+
           const displayPromise = rendition.display(startIndex);
 
           displayPromise
@@ -538,9 +552,14 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
         <div className="text-xs text-center">
           <div>Use ← → arrow keys to switch chapters</div>
           <div className="text-muted/70 mt-0.5">
-            {currentSpineIndex > 0 && currentSpineIndex < totalSpineItems - 1 && "Press → for next chapter, ← for previous"}
-            {currentSpineIndex === 0 && totalSpineItems > 1 && "Press → for next chapter"}
-            {currentSpineIndex === totalSpineItems - 1 && "You're at the last chapter"}
+            {currentSpineIndex > 0 &&
+              currentSpineIndex < totalSpineItems - 1 &&
+              "Press → for next chapter, ← for previous"}
+            {currentSpineIndex === 0 &&
+              totalSpineItems > 1 &&
+              "Press → for next chapter"}
+            {currentSpineIndex === totalSpineItems - 1 &&
+              "You're at the last chapter"}
           </div>
         </div>
       </div>

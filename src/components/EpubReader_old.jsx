@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ePub from "epubjs";
 import { getAPI } from "../utils/electron";
 import { storage } from "../utils/storage";
@@ -12,6 +12,8 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [bookTitle, setBookTitle] = useState("");
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [toc, setToc] = useState([]);
   const [showToc, setShowToc] = useState(false);
   const [currentChapter, setCurrentChapter] = useState("");
@@ -39,8 +41,33 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
     return `book_${Math.abs(hash).toString(36)}`;
   };
 
+  useEffect(() => {
+    if (!filePath) return;
+
+    loadBook();
+
+    return () => {
+      // Cleanup
+      if (renditionRef.current) {
+        try {
+          renditionRef.current.destroy();
+        } catch (e) {
+          console.log("Rendition cleanup:", e);
+        }
+      }
+      if (bookRef.current) {
+        try {
+          bookRef.current.destroy();
+        } catch (e) {
+          console.log("Book cleanup:", e);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filePath]);
+
   // Helper function to update chapter title from spine index
-  const updateChapterTitle = useCallback((spineIndex, book, navigation) => {
+  const updateChapterTitle = (spineIndex, book, navigation) => {
     try {
       const spineItem = book.spine.get(spineIndex);
       if (!spineItem) return;
@@ -80,274 +107,261 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
     } catch (e) {
       console.error("Error updating chapter title:", e);
     }
-  }, []);
+  };
 
-  const nextPage = useCallback(() => {
+  const loadBook = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Loading book:", filePath);
+
+      // Read file via Electron IPC
+      const api = getAPI();
+      const fileResult = await api.readFile(filePath);
+
+      if (!fileResult.success) {
+        throw new Error(fileResult.error || "Failed to read file");
+      }
+
+      console.log("File loaded successfully");
+
+      // Create a new book instance from ArrayBuffer
+      const book = ePub(fileResult.data);
+      bookRef.current = book;
+
+      // Load the book
+      await book.ready;
+      console.log("Book ready");
+
+      // Get book metadata
+      const metadata = await book.loaded.metadata;
+      setBookTitle(metadata.title || "Untitled Book");
+      console.log("Book title:", metadata.title);
+
+      // Generate unique book ID for storage
+      const currentBookId = generateBookId(filePath, metadata);
+      setBookId(currentBookId);
+      console.log("Book ID:", currentBookId);
+
+      // Get navigation (table of contents)
+      await book.loaded.navigation;
+      const navigation = book.navigation;
+      if (navigation && navigation.toc) {
+        console.log("TOC:", navigation.toc);
+        setToc(navigation.toc);
+      }
+
+      // Get spine information (actual chapters)
+      await book.loaded.spine;
+      const spineLength = book.spine.length;
+      setTotalSpineItems(spineLength);
+      console.log("Total spine items (chapters):", spineLength);
+
+      // Render the book
+      if (viewerRef.current) {
+        console.log("Rendering to viewer");
+
+        // Clear previous content
+        viewerRef.current.innerHTML = "";
+
+        const rendition = book.renderTo(viewerRef.current, {
+          width: "100%",
+          height: "100%",
+          spread: "none",
+          flow: "paginated",
+          manager: "default",
+          ignoreClass: "annotator-hl",
+          allowScriptedContent: true,
+          snap: true,
+        });
+
+        renditionRef.current = rendition;
+
+        // Override to prevent packaging errors
+        rendition.injectIdentifier = () => {};
+
+        // Check for saved location and display from there, or start from beginning
+        const savedLocation = storage.getLocation(currentBookId);
+        let startIndex = 0;
+
+        if (savedLocation) {
+          console.log("Restoring saved location:", savedLocation);
+          // Try to find the spine index from saved CFI
+          try {
+            const section = book.spine.get(savedLocation);
+            if (section) {
+              startIndex = section.index;
+              console.log("Found saved spine index:", startIndex);
+            }
+          } catch (e) {
+            console.log("Could not parse saved location, starting from beginning", e);
+          }
+        }
+
+        setCurrentSpineIndex(startIndex);
+        
+        const displayPromise = rendition.display(startIndex);
+
+        displayPromise
+          .then(() => {
+            console.log("Book displayed at spine index:", startIndex);
+            setIsLoading(false);
+
+            // Save this book as the last opened book
+            storage.saveLastBook(filePath);
+            console.log("Saved as last book:", filePath);
+
+            // Update chapter title
+            updateChapterTitle(startIndex, book, navigation);
+
+            // Force a resize after display
+            setTimeout(() => {
+              if (rendition) {
+                rendition.resize();
+              }
+            }, 100);
+          })
+          .catch((err) => {
+            console.error("Display error:", err);
+            setIsLoading(false);
+          });
+
+        // Set up location tracking (keep for page info but don't rely on it)
+        rendition.on("relocated", (location) => {
+          console.log("Relocated event:", location.start.href);
+          setCurrentLocation(location);
+          setCurrentHref(location.start.href);
+
+          // Save current location
+          if (currentBookId && location.start.cfi) {
+            storage.saveLocation(currentBookId, location.start.cfi);
+          }
+
+          // Update current page info
+          if (location.start && book.locations && book.locations.total > 0) {
+            const percent = book.locations.percentageFromCfi(
+              location.start.cfi
+            );
+            const currentPageNum = Math.ceil(percent * book.locations.total);
+            setCurrentPage(currentPageNum || 1);
+          }
+        });
+
+        // Handle click events in the book content
+        rendition.on("click", () => {
+          console.log("Book clicked");
+        });
+
+        // Generate page locations (for page numbers)
+        book.locations
+          .generate(1600)
+          .then(() => {
+            console.log("Locations generated:", book.locations.total);
+            setTotalPages(book.locations.total);
+
+            if (onBookLoaded) {
+              onBookLoaded({
+                title: metadata.title,
+                author: metadata.creator,
+                book,
+                rendition,
+              });
+            }
+          })
+          .catch((err) => {
+            console.error("Error generating locations:", err);
+          });
+
+        // Apply themes with better readability
+        rendition.themes.default({
+          body: {
+            "font-family":
+              '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            "line-height": "1.8",
+            padding: "2rem 4rem",
+            color: "#432323",
+            background: "#ffffff",
+          },
+          p: {
+            "margin-bottom": "1em",
+          },
+          "h1, h2, h3, h4, h5, h6": {
+            "margin-top": "1.5em",
+            "margin-bottom": "0.5em",
+            color: "#2F5755",
+          },
+          a: {
+            color: "#5A9690",
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Error loading book:", error);
+      setIsLoading(false);
+      if (onError) {
+        onError(error);
+      }
+    }
+  };
+
+  const nextPage = () => {
     console.log("=== NEXT CHAPTER ===");
     if (!renditionRef.current || !bookRef.current) {
       console.log("No rendition or book ref!");
       return;
     }
 
-    setCurrentSpineIndex(prevIndex => {
-      const nextIndex = prevIndex + 1;
-      if (nextIndex >= totalSpineItems) {
-        console.log("Already at last chapter");
-        return prevIndex;
-      }
+    const nextIndex = currentSpineIndex + 1;
+    if (nextIndex >= totalSpineItems) {
+      console.log("Already at last chapter");
+      return;
+    }
 
-      console.log(`Moving from spine ${prevIndex} to ${nextIndex}`);
+    console.log(`Moving from spine ${currentSpineIndex} to ${nextIndex}`);
+    setCurrentSpineIndex(nextIndex);
+    
+    renditionRef.current.display(nextIndex).then(() => {
+      console.log("Displayed spine index:", nextIndex);
+      updateChapterTitle(nextIndex, bookRef.current, bookRef.current.navigation);
       
-      // Clear and force redisplay
-      renditionRef.current.clear();
-      renditionRef.current.display(nextIndex).then(() => {
-        console.log("Displayed spine index:", nextIndex);
-        updateChapterTitle(nextIndex, bookRef.current, bookRef.current.navigation);
-        
-        // Save the new location
-        if (bookId) {
-          const spineItem = bookRef.current.spine.get(nextIndex);
-          if (spineItem && spineItem.cfiBase) {
-            storage.saveLocation(bookId, spineItem.cfiBase);
-          }
+      // Save the new location
+      if (bookId) {
+        const spineItem = bookRef.current.spine.get(nextIndex);
+        if (spineItem && spineItem.cfiBase) {
+          storage.saveLocation(bookId, spineItem.cfiBase);
         }
-        
-        // Force resize to ensure proper display
-        setTimeout(() => {
-          renditionRef.current.resize();
-        }, 50);
-      });
-
-      return nextIndex;
+      }
     });
-  }, [totalSpineItems, bookId, updateChapterTitle]);
+  };
 
-  const prevPage = useCallback(() => {
+  const prevPage = () => {
     console.log("=== PREV CHAPTER ===");
     if (!renditionRef.current || !bookRef.current) {
       console.log("No rendition or book ref!");
       return;
     }
 
-    setCurrentSpineIndex(prevIndex => {
-      const newIndex = prevIndex - 1;
-      if (newIndex < 0) {
-        console.log("Already at first chapter");
-        return prevIndex;
-      }
+    const prevIndex = currentSpineIndex - 1;
+    if (prevIndex < 0) {
+      console.log("Already at first chapter");
+      return;
+    }
 
-      console.log(`Moving from spine ${prevIndex} to ${newIndex}`);
+    console.log(`Moving from spine ${currentSpineIndex} to ${prevIndex}`);
+    setCurrentSpineIndex(prevIndex);
+    
+    renditionRef.current.display(prevIndex).then(() => {
+      console.log("Displayed spine index:", prevIndex);
+      updateChapterTitle(prevIndex, bookRef.current, bookRef.current.navigation);
       
-      // Clear and force redisplay
-      renditionRef.current.clear();
-      renditionRef.current.display(newIndex).then(() => {
-        console.log("Displayed spine index:", newIndex);
-        updateChapterTitle(newIndex, bookRef.current, bookRef.current.navigation);
-        
-        // Save the new location
-        if (bookId) {
-          const spineItem = bookRef.current.spine.get(newIndex);
-          if (spineItem && spineItem.cfiBase) {
-            storage.saveLocation(bookId, spineItem.cfiBase);
-          }
+      // Save the new location
+      if (bookId) {
+        const spineItem = bookRef.current.spine.get(prevIndex);
+        if (spineItem && spineItem.cfiBase) {
+          storage.saveLocation(bookId, spineItem.cfiBase);
         }
-        
-        // Force resize to ensure proper display
-        setTimeout(() => {
-          renditionRef.current.resize();
-        }, 50);
-      });
-
-      return newIndex;
+      }
     });
-  }, [bookId, updateChapterTitle]);
-
-  useEffect(() => {
-    if (!filePath) return;
-
-    const loadBook = async () => {
-      try {
-        setIsLoading(true);
-        console.log("Loading book:", filePath);
-
-        // Read file via Electron IPC
-        const api = getAPI();
-        const fileResult = await api.readFile(filePath);
-
-        if (!fileResult.success) {
-          throw new Error(fileResult.error || "Failed to read file");
-        }
-
-        console.log("File loaded successfully");
-
-        // Create a new book instance from ArrayBuffer
-        const book = ePub(fileResult.data);
-        bookRef.current = book;
-
-        // Load the book
-        await book.ready;
-        console.log("Book ready");
-
-        // Get book metadata
-        const metadata = await book.loaded.metadata;
-        setBookTitle(metadata.title || "Untitled Book");
-        console.log("Book title:", metadata.title);
-
-        // Generate unique book ID for storage
-        const currentBookId = generateBookId(filePath, metadata);
-        setBookId(currentBookId);
-        console.log("Book ID:", currentBookId);
-
-        // Get navigation (table of contents)
-        await book.loaded.navigation;
-        const navigation = book.navigation;
-        if (navigation && navigation.toc) {
-          console.log("TOC items:", navigation.toc.length);
-          setToc(navigation.toc);
-        }
-
-        // Get spine information (actual chapters)
-        await book.loaded.spine;
-        const spineLength = book.spine.length;
-        setTotalSpineItems(spineLength);
-        console.log("Total spine items (chapters):", spineLength);
-
-        // Render the book
-        if (viewerRef.current) {
-          console.log("Rendering to viewer");
-
-          // Clear previous content
-          viewerRef.current.innerHTML = "";
-
-          const rendition = book.renderTo(viewerRef.current, {
-            width: "100%",
-            height: "100%",
-            spread: "none",
-            flow: "paginated",
-            manager: "default",
-            ignoreClass: "annotator-hl",
-            allowScriptedContent: true,
-            snap: true,
-          });
-
-          renditionRef.current = rendition;
-
-          // Override to prevent packaging errors
-          rendition.injectIdentifier = () => {};
-
-          // Check for saved location and display from there, or start from beginning
-          const savedLocation = storage.getLocation(currentBookId);
-          let startIndex = 0;
-
-          if (savedLocation) {
-            console.log("Restoring saved location:", savedLocation);
-            // Try to find the spine index from saved CFI
-            try {
-              const section = book.spine.get(savedLocation);
-              if (section) {
-                startIndex = section.index;
-                console.log("Found saved spine index:", startIndex);
-              }
-            } catch (e) {
-              console.log("Could not parse saved location, starting from beginning", e);
-            }
-          }
-
-          setCurrentSpineIndex(startIndex);
-          
-          const displayPromise = rendition.display(startIndex);
-
-          displayPromise
-            .then(() => {
-              console.log("Book displayed at spine index:", startIndex);
-              setIsLoading(false);
-
-              // Save this book as the last opened book
-              storage.saveLastBook(filePath);
-              console.log("Saved as last book:", filePath);
-
-              // Update chapter title
-              updateChapterTitle(startIndex, book, navigation);
-
-              // Force a resize after display
-              setTimeout(() => {
-                if (rendition) {
-                  rendition.resize();
-                }
-              }, 100);
-            })
-            .catch((err) => {
-              console.error("Display error:", err);
-              setIsLoading(false);
-            });
-
-          // Disable automatic location tracking - we handle it manually
-          // rendition.on("relocated", (location) => {
-          //   console.log("Relocated event:", location.start.href);
-          //   setCurrentLocation(location);
-          //   setCurrentHref(location.start.href);
-          //   if (currentBookId && location.start.cfi) {
-          //     storage.saveLocation(currentBookId, location.start.cfi);
-          //   }
-          // });
-
-          // Handle click events in the book content
-          rendition.on("click", () => {
-            console.log("Book clicked");
-          });
-
-          // Apply themes with better readability
-          rendition.themes.default({
-            body: {
-              "font-family":
-                '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-              "line-height": "1.8",
-              padding: "2rem 4rem",
-              color: "#432323",
-              background: "#ffffff",
-            },
-            p: {
-              "margin-bottom": "1em",
-            },
-            "h1, h2, h3, h4, h5, h6": {
-              "margin-top": "1.5em",
-              "margin-bottom": "0.5em",
-              color: "#2F5755",
-            },
-            a: {
-              color: "#5A9690",
-            },
-          });
-        }
-      } catch (error) {
-        console.error("Error loading book:", error);
-        setIsLoading(false);
-        if (onError) {
-          onError(error);
-        }
-      }
-    };
-
-    loadBook();
-
-    return () => {
-      // Cleanup
-      if (renditionRef.current) {
-        try {
-          renditionRef.current.destroy();
-        } catch (e) {
-          console.log("Rendition cleanup:", e);
-        }
-      }
-      if (bookRef.current) {
-        try {
-          bookRef.current.destroy();
-        } catch (e) {
-          console.log("Book cleanup:", e);
-        }
-      }
-    };
-  }, [filePath, onError, updateChapterTitle]);
+  };
 
   // Keyboard navigation
   useEffect(() => {
@@ -367,18 +381,18 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
           break;
         case "PageUp":
           e.preventDefault();
-          prevPage();
+          renditionRef.current.prev();
           break;
         case "PageDown":
           e.preventDefault();
-          nextPage();
+          renditionRef.current.next();
           break;
         case " ":
           e.preventDefault();
           if (e.shiftKey) {
-            prevPage();
+            renditionRef.current.prev();
           } else {
-            nextPage();
+            renditionRef.current.next();
           }
           break;
         default:
@@ -388,7 +402,7 @@ const EpubReader = ({ filePath, onBookLoaded, onError }) => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nextPage, prevPage]);
+  }, []);
 
   const navigateToChapter = (href) => {
     if (renditionRef.current) {

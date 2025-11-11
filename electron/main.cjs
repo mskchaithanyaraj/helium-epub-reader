@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -9,6 +9,18 @@ let mainWindow;
 let fileToOpen = null;
 
 function createWindow() {
+  // Set Content Security Policy
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        "Content-Security-Policy": [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' blob:; img-src 'self' data: blob:;",
+        ],
+      },
+    });
+  });
+
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -22,6 +34,7 @@ function createWindow() {
       preload: path.join(__dirname, "preload.cjs"),
       // Allow loading local files (EPUB files)
       webSecurity: true,
+      allowRunningInsecureContent: false,
     },
     show: false, // Don't show until ready
   });
@@ -132,9 +145,14 @@ ipcMain.handle("get-opened-file", () => {
 ipcMain.handle("read-file", async (event, filePath) => {
   try {
     const buffer = fs.readFileSync(filePath);
+    // Convert Node.js Buffer to ArrayBuffer for renderer process
+    const arrayBuffer = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    );
     return {
       success: true,
-      data: buffer,
+      data: arrayBuffer,
       filePath: filePath,
     };
   } catch (error) {

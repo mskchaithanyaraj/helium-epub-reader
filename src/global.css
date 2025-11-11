@@ -1,0 +1,215 @@
+/* ========================================
+   ADDITIONAL GLOBAL STYLES
+   EPUB Reader specific overrides
+   ======================================== */
+
+/* ===== EPUB.JS IFRAME CONTENT STYLES ===== */
+/* These will be injected into the epub iframe */
+
+.epub-container iframe {
+  border: none;
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== READING AREA STYLES ===== */
+.reading-area {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  line-height: 1.8;
+  font-size: 1.125rem;
+}
+
+/* Better reading experience */
+.reading-area p {
+  margin-bottom: 1em;
+}
+
+.reading-area h1,
+.reading-area h2,
+.reading-area h3,
+.reading-area h4,
+.reading-area h5,
+.reading-area h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  color: var(--clr-text-primary);
+}
+
+/* ===== BUTTON STYLES ===== */
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  outline: none;
+}
+
+.btn-primary {
+  background-color: var(--clr-primary-a0);
+  color: var(--clr-light-a0);
+}
+
+.btn-primary:hover {
+  background-color: var(--clr-primary-a10);
+}
+
+.btn-secondary {
+  background-color: var(--clr-surface-a20);
+  color: var(--clr-text-primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--clr-surface-a30);
+}
+
+.btn-icon {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background-color: transparent;
+  color: var(--clr-text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background-color: var(--clr-surface-a10);
+}
+
+/* ===== LOADING SPINNER ===== */
+.spinner {
+  border: 3px solid var(--clr-surface-a20);
+  border-top-color: var(--clr-primary-a0);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== CARD STYLES ===== */
+.card {
+  background-color: var(--clr-surface-a10);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card-elevated {
+  background-color: var(--clr-surface-a20);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== TOOLTIP ===== */
+.tooltip {
+  position: absolute;
+  background-color: var(--clr-surface-a40);
+  color: var(--clr-text-primary);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== MODAL OVERLAY ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+  background-color: var(--clr-surface-a0);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: var(--clr-surface-a20);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--clr-primary-a0);
+  transition: width 0.3s ease;
+}
+
+/* ===== INPUT STYLES ===== */
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  background: var(--clr-surface-a20);
+  outline: none;
+  border-radius: 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--clr-primary-a0);
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--clr-primary-a0);
+  cursor: pointer;
+  border-radius: 50%;
+  border: none;
+}

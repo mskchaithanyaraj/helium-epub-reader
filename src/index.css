@@ -1,3 +1,233 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ========================================
+   HELIUM EPUB READER - GLOBAL STYLES
+   Color Palette: Maroon, Teal, Grey
+   Low Contrast for Comfortable Reading
+   ======================================== */
+
+:root {
+  /* Base colors */
+  --clr-dark-a0: #000000;
+  --clr-light-a0: #ffffff;
+
+  /* Brand colors - Maroon, Teal, Grey */
+  --clr-maroon: #432323;
+  --clr-maroon-light: #5a3030;
+  --clr-maroon-lighter: #724040;
+  --clr-teal: #2f5755;
+  --clr-teal-light: #5a9690;
+  --clr-teal-lighter: #7cb3ad;
+  --clr-grey: #e0d9d9;
+  --clr-grey-dark: #b8b0b0;
+  --clr-grey-darker: #8f8888;
+
+  /* Highlight color - Light blue for text selection */
+  --clr-highlight: #add8e6;
+  --clr-highlight-hover: #87ceeb;
+
+  /* ===== LIGHT MODE THEME ===== */
+  /* Theme primary colors - Using Teal as primary */
+  --clr-primary-a0: #2f5755;
+  --clr-primary-a10: #3d6866;
+  --clr-primary-a20: #4a7977;
+  --clr-primary-a30: #5a9690;
+  --clr-primary-a40: #7cb3ad;
+  --clr-primary-a50: #9dc7c3;
+
+  /* Theme surface colors - Light grey tones */
+  --clr-surface-a0: #ffffff;
+  --clr-surface-a10: #f5f5f5;
+  --clr-surface-a20: #e0d9d9;
+  --clr-surface-a30: #d0c9c9;
+  --clr-surface-a40: #c0b9b9;
+  --clr-surface-a50: #b0a9a9;
+
+  /* Theme tonal surface colors */
+  --clr-surface-tonal-a0: #f8f5f5;
+  --clr-surface-tonal-a10: #ede8e8;
+  --clr-surface-tonal-a20: #e0d9d9;
+  --clr-surface-tonal-a30: #d4cdcd;
+  --clr-surface-tonal-a40: #c8c1c1;
+  --clr-surface-tonal-a50: #bcb5b5;
+
+  /* Text colors for light mode */
+  --clr-text-primary: #432323;
+  --clr-text-secondary: #5a3030;
+  --clr-text-tertiary: #724040;
+  --clr-text-muted: #8f8888;
+
+  /* Success colors */
+  --clr-success-a0: #22946e;
+  --clr-success-a10: #47d5a6;
+  --clr-success-a20: #9ae8ce;
+
+  /* Warning colors */
+  --clr-warning-a0: #a87a2a;
+  --clr-warning-a10: #d7ac61;
+  --clr-warning-a20: #ecd7b2;
+
+  /* Danger colors */
+  --clr-danger-a0: #9c2121;
+  --clr-danger-a10: #d94a4a;
+  --clr-danger-a20: #eb9e9e;
+
+  /* Info colors */
+  --clr-info-a0: #21498a;
+  --clr-info-a10: #4077d1;
+  --clr-info-a20: #92b2e5;
+
+  /* Reader specific */
+  --reader-bg: #ffffff;
+  --reader-text: #432323;
+  --reader-link: #2f5755;
+}
+
+/* ===== DARK MODE THEME ===== */
+.dark {
+  /* Theme primary colors - Lighter teal for dark mode */
+  --clr-primary-a0: #5a9690;
+  --clr-primary-a10: #6ba59f;
+  --clr-primary-a20: #7cb3ad;
+  --clr-primary-a30: #8dc2bc;
+  --clr-primary-a40: #9ed0cb;
+  --clr-primary-a50: #afdfda;
+
+  /* Theme surface colors - Dark grey tones */
+  --clr-surface-a0: #1a1414;
+  --clr-surface-a10: #2a2020;
+  --clr-surface-a20: #3a2e2e;
+  --clr-surface-a30: #4a3c3c;
+  --clr-surface-a40: #5a4a4a;
+  --clr-surface-a50: #6a5858;
+
+  /* Theme tonal surface colors */
+  --clr-surface-tonal-a0: #221a1a;
+  --clr-surface-tonal-a10: #322626;
+  --clr-surface-tonal-a20: #423232;
+  --clr-surface-tonal-a30: #523e3e;
+  --clr-surface-tonal-a40: #624a4a;
+  --clr-surface-tonal-a50: #725656;
+
+  /* Text colors for dark mode - Lower contrast */
+  --clr-text-primary: #e0d9d9;
+  --clr-text-secondary: #c8c1c1;
+  --clr-text-tertiary: #b0a9a9;
+  --clr-text-muted: #8f8888;
+
+  /* Reader specific for dark mode */
+  --reader-bg: #1a1414;
+  --reader-text: #d4cdcd;
+  --reader-link: #7cb3ad;
+}
+
+/* ===== BASE STYLES ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--clr-surface-a0);
+  color: var(--clr-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.bg-primary {
+  background-color: var(--clr-primary-a0);
+  color: var(--clr-light-a0);
+}
+
+.bg-surface {
+  background-color: var(--clr-surface-a0);
+  color: var(--clr-text-primary);
+}
+
+.bg-surface-elevated {
+  background-color: var(--clr-surface-a10);
+  color: var(--clr-text-primary);
+}
+
+.text-primary {
+  color: var(--clr-text-primary);
+}
+
+.text-secondary {
+  color: var(--clr-text-secondary);
+}
+
+.text-muted {
+  color: var(--clr-text-muted);
+}
+
+/* ===== HIGHLIGHT STYLES ===== */
+::selection {
+  background-color: var(--clr-highlight);
+  color: var(--clr-text-primary);
+}
+
+::-moz-selection {
+  background-color: var(--clr-highlight);
+  color: var(--clr-text-primary);
+}
+
+.epub-highlight {
+  background-color: var(--clr-highlight) !important;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.epub-highlight:hover {
+  background-color: var(--clr-highlight-hover) !important;
+}
+
+/* ===== SCROLLBAR STYLES ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--clr-surface-a10);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--clr-surface-a30);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--clr-surface-a40);
+}
+
+/* ===== EPUB READER CONTAINER ===== */
+.epub-container {
+  background-color: var(--reader-bg);
+  color: var(--reader-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ===== SMOOTH TRANSITIONS ===== */
+button,
+a,
+.interactive {
+  transition: all 0.2s ease;
+}
+
+/* ===== FOCUS STYLES ===== */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--clr-primary-a30);
+  outline-offset: 2px;
+}
